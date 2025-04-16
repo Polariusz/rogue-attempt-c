@@ -2,11 +2,17 @@
 #include <stdlib.h>
 #include <ncurses.h>
 
+/*
+ * Used in the struct Mob to know the position of the mobs/player.
+*/
 struct Position {
 	int y;
 	int x;
 };
 
+/*
+ * Used in the struct GameState to know where the end and the beginning of the main window is.
+*/
 struct Border {
 	int h;
 	int w;
@@ -14,26 +20,95 @@ struct Border {
 	int sw;
 };
 
+/*
+ * Used as enemy mobs and as a player.
+*/
 struct Mob {
 	struct Position pos;
 	char repr;
 };
 
+/*
+ * It's the whole game_state that is passed into multiple methods that initialise the member variables, and into functions that for example display the mob list on the ncurses window.
+*/
 struct GameState {
-	struct Mob player;
+	/*
+	 * Used to know where the end and the beginning of the main window is.
+	*/
 	struct Border border;
+
+	/*
+	 * Used to know the position of the player and the character that represent the player.
+	*/
+	struct Mob player;
+
+	/*
+	 * Used to display mobs.
+	*/
 	struct Mob *mob_list;
+
+	/*
+	 * It's the length of the member variable mob_list.
+	*/
 	int mob_list_len;
 };
 
+/*
+ * Initialises the ncurses and hides echo and cursor.
+*/
 void init_ncurses(void);
+
+/*
+ * Initialises the border for the argument that will be used for the game border and the window
+*/
 void init_border(struct GameState *game_state);
+
+/*
+ * Initialises player for the argument by giving the Mob struct position and a char representation.
+*/
 void init_player(struct GameState *game_state);
+
+/*
+ * Initialises mobs for the argument by randomly placing it inside the border.
+*/
 void init_mob_list(struct GameState *game_state);
+
+/*
+ * Uses ncurses to show the window and place the mobs as well as the player.
+*/
 void show_on_window(struct GameState *game_state);
+
+/*
+ * That's the user input loop: It checks for the input of the user.
+ * Keys:
+ *     'q' - Quits the loop
+ *     'w' - Moves the player up
+ *     's' - Moves the player down
+ *     'a' - Moves the player left
+ *     'd' - Moves the player right
+*/
 void user_loop(struct GameState *game_state);
+
+/*
+ * Ends the ncurses by calling the endwin(); method.
+*/
 void end_program(struct GameState *game_state);
+
+/*
+ * Prints the whole state of the argument out.
+ * It uses printf, so the output will be visible once the the ncurses is ended.
+*/
 void print_state_out(struct GameState *game_state);
+
+/*
+ * Returns 0 if there is no collision with the border and 1 if there is.
+*/
+int is_colliding_with_border(struct GameState *game_state, struct Position *pos);
+
+/*
+ * Moves the player into the new position. It clears the character the player was previously in.
+*/
+void move_player(struct GameState *game_state, struct Position *new_position);
 
 int main(void)
 {
@@ -46,6 +121,7 @@ int main(void)
 	show_on_window(&game_state);
 	user_loop(&game_state);
 	end_program(&game_state);
+
 	print_state_out(&game_state);
 
 	printf("Just Monika.\n");
@@ -60,7 +136,6 @@ void init_ncurses(void)
 	noecho();
 	// Cursor is invisible
 	curs_set(0);
-
 
 	return;
 }
@@ -114,8 +189,6 @@ void show_on_window(struct GameState *game_state)
 	refresh();
 	wrefresh(main_window);
 
-	(void) game_state;
-
 	for(int i = 0; i < game_state->mob_list_len; i++) {
 		mvaddch(game_state->mob_list[i].pos.y, game_state->mob_list[i].pos.x, game_state->mob_list[i].repr);
 	}
@@ -132,14 +205,34 @@ void user_loop(struct GameState *game_state)
 	char user_input;
 	while((user_input = getch()) != 'q') {
 		switch (user_input) {
-			case 'w':
+		case 'w': {
+				struct Position new_pos = {game_state->player.pos.y-1, game_state->player.pos.x};
+				if(!is_colliding_with_border(game_state, &new_pos)) {
+					move_player(game_state, &new_pos);
+				}
 				break;
-			case 's':
+			}
+		case 's': {
+				struct Position new_pos = {game_state->player.pos.y+1, game_state->player.pos.x};
+				if(!is_colliding_with_border(game_state, &new_pos)) {
+					move_player(game_state, &new_pos);
+				}
 				break;
-			case 'a':
+			}
+		case 'a': {
+				struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x-1};
+				if(!is_colliding_with_border(game_state, &new_pos)) {
+					move_player(game_state, &new_pos);
+				}
 				break;
-			case 'd':
+			}
+		case 'd': {
+				struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x+1};
+				if(!is_colliding_with_border(game_state, &new_pos)) {
+					move_player(game_state, &new_pos);
+				}
 				break;
+			}
 		}
 	}
 }
@@ -179,4 +272,25 @@ void print_state_out(struct GameState *game_state)
 
 	printf("Mob list len: %d\n", game_state->mob_list_len);
 	printf("\n");
+}
+
+int is_colliding_with_border(struct GameState *game_state, struct Position *pos)
+{
+	// Border collision
+	if( pos->y >= game_state->border.h-1 ||
+		pos->y <= game_state->border.sh ||
+		pos->x >= game_state->border.w-1 ||
+		pos->x <= game_state->border.sw ) {
+			return 1;
+		}
+	return 0;
+}
+
+void move_player(struct GameState *game_state, struct Position *new_position)
+{
+	mvaddch(game_state->player.pos.y, game_state->player.pos.x, ' ');
+	game_state->player.pos = *new_position;
+	mvaddch(game_state->player.pos.y, game_state->player.pos.x, '@');
+
+	return;
 }
