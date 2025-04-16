@@ -106,9 +106,10 @@ void print_state_out(struct GameState *game_state);
 int is_colliding_with_border(struct GameState *game_state, struct Position *pos);
 
 /*
- * Moves the player into the new position. It clears the character the player was previously in.
+ * Moves mob into the new position. It clears the character the player was previously in.
+ * The function is more generic than move_player, because it accepts mob as a pointer, it can be used for the player as well.
 */
-void move_player(struct GameState *game_state, struct Position *new_position);
+void move_mob(struct Mob *mob, struct Position *new_position);
 
 int main(void)
 {
@@ -208,28 +209,28 @@ void user_loop(struct GameState *game_state)
 		case 'w': {
 				struct Position new_pos = {game_state->player.pos.y-1, game_state->player.pos.x};
 				if(!is_colliding_with_border(game_state, &new_pos)) {
-					move_player(game_state, &new_pos);
+					move_mob(&game_state->player, &new_pos);
 				}
 				break;
 			}
 		case 's': {
 				struct Position new_pos = {game_state->player.pos.y+1, game_state->player.pos.x};
 				if(!is_colliding_with_border(game_state, &new_pos)) {
-					move_player(game_state, &new_pos);
+					move_mob(&game_state->player, &new_pos);
 				}
 				break;
 			}
 		case 'a': {
 				struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x-1};
 				if(!is_colliding_with_border(game_state, &new_pos)) {
-					move_player(game_state, &new_pos);
+					move_mob(&game_state->player, &new_pos);
 				}
 				break;
 			}
 		case 'd': {
 				struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x+1};
 				if(!is_colliding_with_border(game_state, &new_pos)) {
-					move_player(game_state, &new_pos);
+					move_mob(&game_state->player, &new_pos);
 				}
 				break;
 			}
@@ -286,11 +287,11 @@ int is_colliding_with_border(struct GameState *game_state, struct Position *pos)
 	return 0;
 }
 
-void move_player(struct GameState *game_state, struct Position *new_position)
+void move_mob(struct Mob *mob, struct Position *new_position)
 {
-	mvaddch(game_state->player.pos.y, game_state->player.pos.x, ' ');
-	game_state->player.pos = *new_position;
-	mvaddch(game_state->player.pos.y, game_state->player.pos.x, '@');
+	mvaddch(mob->pos.y, mob->pos.x, ' ');
+	mob->pos = *new_position;
+	mvaddch(mob->pos.y, mob->pos.x, mob->repr);
 
 	return;
 }
