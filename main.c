@@ -101,6 +101,11 @@ void end_program(struct GameState *game_state);
 void print_state_out(struct GameState *game_state);
 
 /*
+ * This method frees the allocated by malloc or similar memory. For now the mob list is malloced so it shall be removed here..
+*/
+void free_allocated_memory(struct GameState *game_state);
+
+/*
  * Returns 0 if there is no collision with the border and 1 if there is.
 */
 int is_colliding_with_border(struct GameState *game_state, struct Position *pos);
@@ -122,8 +127,8 @@ int main(void)
 	show_on_window(&game_state);
 	user_loop(&game_state);
 	end_program(&game_state);
-
 	print_state_out(&game_state);
+	free_allocated_memory(&game_state);
 
 	printf("Just Monika.\n");
 	return 0;
@@ -160,7 +165,7 @@ void init_player(struct GameState *game_state)
 
 void init_mob_list(struct GameState *game_state)
 {
-	const int MOB_CNT = 400;
+	const int MOB_CNT = 10;
 	struct Mob *mob_list = malloc(MOB_CNT * sizeof(struct Mob));
 
 	for(int i = 0; i < MOB_CNT; i++) {
@@ -273,6 +278,13 @@ void print_state_out(struct GameState *game_state)
 
 	printf("Mob list len: %d\n", game_state->mob_list_len);
 	printf("\n");
+}
+
+void free_allocated_memory(struct GameState *game_state)
+{
+	free(game_state->mob_list);
+	game_state->mob_list = NULL;
+	return;
 }
 
 int is_colliding_with_border(struct GameState *game_state, struct Position *pos)
