@@ -71,7 +71,7 @@ void init_player(struct GameState *game_state);
 /*
  * Initialises mobs for the argument by randomly placing it inside the border.
 */
-void init_mob_list(struct GameState *game_state);
+void init_mob_list(struct GameState *game_state, const int MOB_CNT);
 
 /*
  * Uses ncurses to show the window and place the mobs as well as the player.
@@ -87,7 +87,35 @@ void show_on_window(struct GameState *game_state);
  *     'a' - Moves the player left
  *     'd' - Moves the player right
 */
-void user_loop(struct GameState *game_state);
+
+/*
+ * It's the main game loop where the function firstly listens to the player's input and then
+ * calls additional functions to move player and mobs.
+*/
+void game_loop(struct GameState *game_state);
+
+/*
+ * Depending on the user_input the player will move to a different place.
+ * Defined keys are:
+ *     'q' - Quits the loop
+ *     '1' - Moves the player down and left
+ *     '2' - Moves the player down
+ *     '3' - Moves the player down and right
+ *     '4' - Moves the player left
+ *     '5' - Waits
+ *     '6' - Moves the player right
+ *     '7' - Moves the player up and left
+ *     '8' - Moves the player up
+ *     '9' - Moves the player up and right
+ *
+ * Returns 0 if the use input was valid, 1 if the user hit a wall and 2 if the key is not supported.
+*/
+int move_player(struct GameState *game_state, char user_input);
+
+/*
+ * The function will hopefully move mobs from the game_state.
+*/
+void move_mob_list(struct GameState *game_state);
 
 /*
  * Ends the ncurses by calling the endwin(); method.
@@ -123,9 +151,9 @@ int main(void)
 
 	init_border(&game_state);
 	init_player(&game_state);
-	init_mob_list(&game_state);
+	init_mob_list(&game_state, 10);
 	show_on_window(&game_state);
-	user_loop(&game_state);
+	game_loop(&game_state);
 	end_program(&game_state);
 	print_state_out(&game_state);
 	free_allocated_memory(&game_state);
@@ -163,9 +191,8 @@ void init_player(struct GameState *game_state)
 	return;
 }
 
-void init_mob_list(struct GameState *game_state)
+void init_mob_list(struct GameState *game_state, const int MOB_CNT)
 {
-	const int MOB_CNT = 10;
 	struct Mob *mob_list = malloc(MOB_CNT * sizeof(struct Mob));
 
 	for(int i = 0; i < MOB_CNT; i++) {
@@ -204,43 +231,102 @@ void show_on_window(struct GameState *game_state)
 	return;
 }
 
-void user_loop(struct GameState *game_state)
+void game_loop(struct GameState *game_state)
+{
+	while(1) {
+		char user_input = getch();
+		if(user_input == 'q') {
+			break;
+		}
+		if(!move_player(game_state, user_input)) {
+			continue;
+		}
+		move_mob_list(game_state);
+	}
+}
+
+int move_player(struct GameState *game_state, char user_input)
 {
 	(void) game_state;
 
-	char user_input;
-	while((user_input = getch()) != 'q') {
-		switch (user_input) {
-		case 'w': {
-				struct Position new_pos = {game_state->player.pos.y-1, game_state->player.pos.x};
-				if(!is_colliding_with_border(game_state, &new_pos)) {
-					move_mob(&game_state->player, &new_pos);
-				}
-				break;
+	switch (user_input) {
+	case '7': {
+			struct Position new_pos = {game_state->player.pos.y-1, game_state->player.pos.x-1};
+			if(!is_colliding_with_border(game_state, &new_pos)) {
+				move_mob(&game_state->player, &new_pos);
+				return 0;
 			}
-		case 's': {
-				struct Position new_pos = {game_state->player.pos.y+1, game_state->player.pos.x};
-				if(!is_colliding_with_border(game_state, &new_pos)) {
-					move_mob(&game_state->player, &new_pos);
-				}
-				break;
+			return 1;
+		}
+	case '8': {
+			struct Position new_pos = {game_state->player.pos.y-1, game_state->player.pos.x};
+			if(!is_colliding_with_border(game_state, &new_pos)) {
+				move_mob(&game_state->player, &new_pos);
+				return 0;
 			}
-		case 'a': {
-				struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x-1};
-				if(!is_colliding_with_border(game_state, &new_pos)) {
-					move_mob(&game_state->player, &new_pos);
-				}
-				break;
+			return 1;
+		}
+	case '9': {
+			struct Position new_pos = {game_state->player.pos.y-1, game_state->player.pos.x+1};
+			if(!is_colliding_with_border(game_state, &new_pos)) {
+				move_mob(&game_state->player, &new_pos);
+				return 0;
 			}
-		case 'd': {
-				struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x+1};
-				if(!is_colliding_with_border(game_state, &new_pos)) {
-					move_mob(&game_state->player, &new_pos);
-				}
-				break;
+			return 1;
+		}
+	case '1': {
+			struct Position new_pos = {game_state->player.pos.y+1, game_state->player.pos.x-1};
+			if(!is_colliding_with_border(game_state, &new_pos)) {
+				move_mob(&game_state->player, &new_pos);
+				return 0;
 			}
+			return 1;
+		}
+	case '2': {
+			struct Position new_pos = {game_state->player.pos.y+1, game_state->player.pos.x};
+			if(!is_colliding_with_border(game_state, &new_pos)) {
+				move_mob(&game_state->player, &new_pos);
+				return 0;
+			}
+			return 1;
+		}
+	case '3': {
+			struct Position new_pos = {game_state->player.pos.y+1, game_state->player.pos.x+1};
+			if(!is_colliding_with_border(game_state, &new_pos)) {
+				move_mob(&game_state->player, &new_pos);
+				return 0;
+			}
+			return 1;
+		}
+	case '4': {
+			struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x-1};
+			if(!is_colliding_with_border(game_state, &new_pos)) {
+				move_mob(&game_state->player, &new_pos);
+				return 0;
+			}
+			return 1;
+		}
+	case '5': {
+			// Will wait one turn.
+			return 0;
+		}
+	case '6': {
+			struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x+1};
+			if(!is_colliding_with_border(game_state, &new_pos)) {
+				move_mob(&game_state->player, &new_pos);
+				return 0;
+			}
+			return 1;
+		}
+	default: {
+			return 2;
 		}
 	}
+}
+
+void move_mob_list(struct GameState *game_state)
+{
+	(void)game_state;
 }
 
 void end_program(struct GameState *game_state)
