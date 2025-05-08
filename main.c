@@ -118,6 +118,12 @@ int move_player(struct GameState *game_state, char user_input);
 */
 void move_mob_list(struct GameState *game_state);
 
+struct Position generate_random_position(struct Border *border);
+
+struct Position get_direction(struct Position *current_pos, struct Position *target_pos);
+
+int equals_position(struct Position *current_pos, struct Position *target_pos);
+
 /*
  * Ends the ncurses by calling the endwin(); method.
 */
@@ -157,6 +163,7 @@ int main(void)
 	game_loop(&game_state);
 	end_program(&game_state);
 	print_state_out(&game_state);
+
 	free_allocated_memory(&game_state);
 
 	printf("Just Monika.\n");
@@ -328,14 +335,57 @@ int move_player(struct GameState *game_state, char user_input)
 void move_mob_list(struct GameState *game_state)
 {
 	for(int i = 0; i < game_state->mob_list_len; i++) {
-		struct Position new_pos = {game_state->mob_list[i].current_pos.y+1, game_state->mob_list[i].current_pos.x};
-		if(!is_colliding_with_border(game_state, &new_pos)) {
-			move_mob(&game_state->mob_list[i], &new_pos);
+		if(equals_position(&game_state->mob_list[i].current_pos, &game_state->mob_list[i].target_pos)) {
+			if(rand() % 4 == 0) {
+				game_state->mob_list[i].target_pos = generate_random_position(&game_state->border);
+			}
+			continue;
+		}
+
+		struct Position direction = get_direction(&game_state->mob_list[i].current_pos, &game_state->mob_list[i].target_pos);
+
+		if(!is_colliding_with_border(game_state, &direction)) {
+			move_mob(&game_state->mob_list[i], &direction);
 		} else {
-			new_pos.y -= 1;
-			move_mob(&game_state->mob_list[i], &new_pos);
+			printf("WARN: generated target is out of bounds!");
 		}
 	}
+}
+
+struct Position generate_random_position(struct Border *border)
+{
+	int h = 1 + rand() % (border->h - 2);
+	int w = 1 + rand() % (border->w - 2);
+
+	return (struct Position) {h, w};
+}
+
+struct Position get_direction(struct Position *current_pos, struct Position *target_pos)
+{
+	int y = 0;
+	if(current_pos->y > target_pos->y) {
+		y = current_pos->y - 1;
+	} else if (current_pos->y < target_pos->y) {
+		y = current_pos->y + 1;
+	} else {
+		y = current_pos->y;
+	}
+
+	int x = 0;
+	if(current_pos->x > target_pos->x) {
+		x = current_pos->x - 1;
+	} else if (current_pos->x < target_pos->x) {
+		x = current_pos->x + 1;
+	} else {
+		x = current_pos->x;
+	}
+
+	return (struct Position) {y, x};
+}
+
+int equals_position(struct Position *current_pos, struct Position *target_pos)
+{
+	return current_pos->x == target_pos->x && current_pos->y == target_pos->y;
 }
 
 void end_program(struct GameState *game_state)
