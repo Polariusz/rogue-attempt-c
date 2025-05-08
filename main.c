@@ -24,7 +24,8 @@ struct Border {
  * Used as enemy mobs and as a player.
 */
 struct Mob {
-	struct Position pos;
+	struct Position current_pos;
+	struct Position target_pos;
 	char repr;
 };
 
@@ -185,7 +186,7 @@ void init_border(struct GameState *game_state)
 void init_player(struct GameState *game_state)
 {
 	struct Position position = {1, 1};
-	struct Mob player = {position, '@'};
+	struct Mob player = {position, position, '@'};
 	game_state->player = player;
 
 	return;
@@ -200,7 +201,7 @@ void init_mob_list(struct GameState *game_state, const int MOB_CNT)
 		int w = 1 + rand() % (game_state->border.w - 2);
 
 		struct Position pos = {h, w};
-		struct Mob mob = {pos, 'r'};
+		struct Mob mob = {pos, pos, 'r'};
 
 		mob_list[i] = mob;
 	}
@@ -223,10 +224,10 @@ void show_on_window(struct GameState *game_state)
 	wrefresh(main_window);
 
 	for(int i = 0; i < game_state->mob_list_len; i++) {
-		mvaddch(game_state->mob_list[i].pos.y, game_state->mob_list[i].pos.x, game_state->mob_list[i].repr);
+		mvaddch(game_state->mob_list[i].current_pos.y, game_state->mob_list[i].current_pos.x, game_state->mob_list[i].repr);
 	}
 
-	mvaddch(game_state->player.pos.y, game_state->player.pos.x, game_state->player.repr);
+	mvaddch(game_state->player.current_pos.y, game_state->player.current_pos.x, game_state->player.repr);
 
 	return;
 }
@@ -238,7 +239,7 @@ void game_loop(struct GameState *game_state)
 		if(user_input == 'q') {
 			break;
 		}
-		if(!move_player(game_state, user_input)) {
+		if(move_player(game_state, user_input) != 0) {
 			continue;
 		}
 		move_mob_list(game_state);
@@ -251,7 +252,7 @@ int move_player(struct GameState *game_state, char user_input)
 
 	switch (user_input) {
 	case '7': {
-			struct Position new_pos = {game_state->player.pos.y-1, game_state->player.pos.x-1};
+			struct Position new_pos = {game_state->player.current_pos.y-1, game_state->player.current_pos.x-1};
 			if(!is_colliding_with_border(game_state, &new_pos)) {
 				move_mob(&game_state->player, &new_pos);
 				return 0;
@@ -259,7 +260,7 @@ int move_player(struct GameState *game_state, char user_input)
 			return 1;
 		}
 	case '8': {
-			struct Position new_pos = {game_state->player.pos.y-1, game_state->player.pos.x};
+			struct Position new_pos = {game_state->player.current_pos.y-1, game_state->player.current_pos.x};
 			if(!is_colliding_with_border(game_state, &new_pos)) {
 				move_mob(&game_state->player, &new_pos);
 				return 0;
@@ -267,7 +268,7 @@ int move_player(struct GameState *game_state, char user_input)
 			return 1;
 		}
 	case '9': {
-			struct Position new_pos = {game_state->player.pos.y-1, game_state->player.pos.x+1};
+			struct Position new_pos = {game_state->player.current_pos.y-1, game_state->player.current_pos.x+1};
 			if(!is_colliding_with_border(game_state, &new_pos)) {
 				move_mob(&game_state->player, &new_pos);
 				return 0;
@@ -275,7 +276,7 @@ int move_player(struct GameState *game_state, char user_input)
 			return 1;
 		}
 	case '1': {
-			struct Position new_pos = {game_state->player.pos.y+1, game_state->player.pos.x-1};
+			struct Position new_pos = {game_state->player.current_pos.y+1, game_state->player.current_pos.x-1};
 			if(!is_colliding_with_border(game_state, &new_pos)) {
 				move_mob(&game_state->player, &new_pos);
 				return 0;
@@ -283,7 +284,7 @@ int move_player(struct GameState *game_state, char user_input)
 			return 1;
 		}
 	case '2': {
-			struct Position new_pos = {game_state->player.pos.y+1, game_state->player.pos.x};
+			struct Position new_pos = {game_state->player.current_pos.y+1, game_state->player.current_pos.x};
 			if(!is_colliding_with_border(game_state, &new_pos)) {
 				move_mob(&game_state->player, &new_pos);
 				return 0;
@@ -291,7 +292,7 @@ int move_player(struct GameState *game_state, char user_input)
 			return 1;
 		}
 	case '3': {
-			struct Position new_pos = {game_state->player.pos.y+1, game_state->player.pos.x+1};
+			struct Position new_pos = {game_state->player.current_pos.y+1, game_state->player.current_pos.x+1};
 			if(!is_colliding_with_border(game_state, &new_pos)) {
 				move_mob(&game_state->player, &new_pos);
 				return 0;
@@ -299,7 +300,7 @@ int move_player(struct GameState *game_state, char user_input)
 			return 1;
 		}
 	case '4': {
-			struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x-1};
+			struct Position new_pos = {game_state->player.current_pos.y, game_state->player.current_pos.x-1};
 			if(!is_colliding_with_border(game_state, &new_pos)) {
 				move_mob(&game_state->player, &new_pos);
 				return 0;
@@ -311,7 +312,7 @@ int move_player(struct GameState *game_state, char user_input)
 			return 0;
 		}
 	case '6': {
-			struct Position new_pos = {game_state->player.pos.y, game_state->player.pos.x+1};
+			struct Position new_pos = {game_state->player.current_pos.y, game_state->player.current_pos.x+1};
 			if(!is_colliding_with_border(game_state, &new_pos)) {
 				move_mob(&game_state->player, &new_pos);
 				return 0;
@@ -326,7 +327,15 @@ int move_player(struct GameState *game_state, char user_input)
 
 void move_mob_list(struct GameState *game_state)
 {
-	(void)game_state;
+	for(int i = 0; i < game_state->mob_list_len; i++) {
+		struct Position new_pos = {game_state->mob_list[i].current_pos.y+1, game_state->mob_list[i].current_pos.x};
+		if(!is_colliding_with_border(game_state, &new_pos)) {
+			move_mob(&game_state->mob_list[i], &new_pos);
+		} else {
+			new_pos.y -= 1;
+			move_mob(&game_state->mob_list[i], &new_pos);
+		}
+	}
 }
 
 void end_program(struct GameState *game_state)
@@ -340,8 +349,8 @@ void end_program(struct GameState *game_state)
 void print_state_out(struct GameState *game_state)
 {
 	printf("Player: \n");
-	printf("    y:%d\n", game_state->player.pos.y);
-	printf("    x:%d\n", game_state->player.pos.x);
+	printf("    y:%d\n", game_state->player.current_pos.y);
+	printf("    x:%d\n", game_state->player.current_pos.x);
 	printf("    repr:%c\n", game_state->player.repr);
 	printf("\n");
 
@@ -356,8 +365,8 @@ void print_state_out(struct GameState *game_state)
 	for(int i = 0; i < game_state->mob_list_len; i++) {
 
 		printf("    Mob %d: \n", i);
-		printf("        y:%d\n", game_state->mob_list[i].pos.y);
-		printf("        x:%d\n", game_state->mob_list[i].pos.x);
+		printf("        y:%d\n", game_state->mob_list[i].current_pos.y);
+		printf("        x:%d\n", game_state->mob_list[i].current_pos.x);
 		printf("        repr:%c\n", game_state->mob_list[i].repr);
 	}
 	printf("\n");
@@ -387,9 +396,9 @@ int is_colliding_with_border(struct GameState *game_state, struct Position *pos)
 
 void move_mob(struct Mob *mob, struct Position *new_position)
 {
-	mvaddch(mob->pos.y, mob->pos.x, ' ');
-	mob->pos = *new_position;
-	mvaddch(mob->pos.y, mob->pos.x, mob->repr);
+	mvaddch(mob->current_pos.y, mob->current_pos.x, ' ');
+	mob->current_pos = *new_position;
+	mvaddch(mob->current_pos.y, mob->current_pos.x, mob->repr);
 
 	return;
 }
